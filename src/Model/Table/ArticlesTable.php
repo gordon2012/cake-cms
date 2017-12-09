@@ -5,6 +5,7 @@ namespace App\Model\Table;
 use Cake\ORM\Table;
 use Cake\Utility\Text;
 use Cake\Validation\Validator;
+use Cake\Datasource\ConnectionManager;
 
 class ArticlesTable extends Table {
     public function initialize(array $config) {
@@ -16,8 +17,11 @@ class ArticlesTable extends Table {
             $sluggedTitle = Text::slug($entity->title);
 
             // trim slig to max length defined in schema
-            // TODO: actually get the number instead of hardcode
-            $entity->slug = substr($sluggedTitle, 0, 191);
+            $db = ConnectionManager::get('default');
+            $collection = $db->schemaCollection();
+            $tableSchema = $collection->describe('articles');
+            $length = $tableSchema->column('slug')['length'];
+            $entity->slug = substr($sluggedTitle, 0, $length);
         }
     }
 
