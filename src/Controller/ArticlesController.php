@@ -27,8 +27,7 @@ class ArticlesController extends AppController {
         if($this->request->is('post')) {
             $article = $this->Articles->patchEntity($article, $this->request->getData());
 
-            // TODO: unhardcode user
-            $article->user_id = 1;
+            $article->user_id = $this->Auth->user('id');
 
             if($this->Articles->save($article)) {
                 $this->Flash->success(__('Your article has been saved.'));
@@ -47,7 +46,9 @@ class ArticlesController extends AppController {
             ->contain('Tags')
             ->firstOrFail();
         if($this->request->is(['post', 'put'])) {
-            $this->Articles->patchEntity($article, $this->request->getData());
+            $this->Articles->patchEntity($article, $this->request->getData(), [
+                'accessibleFields' => ['user_id' => false]
+            ]);
             if($this->Articles->save($article)) {
                 $this->Flash->success(__('Your article has been updated'));
                 return $this->redirect(['action'=>'index']);
@@ -80,5 +81,24 @@ class ArticlesController extends AppController {
             'articles'=>$articles,
             'tags'=>$tags
         ]);
+    }
+
+    public function isAuthorized($user) {
+        $action = $this->request->getParam('action');
+
+        // add and tag are allowed to logged in users
+        if(in_array($action, ['add', 'tags'])) {
+            return true;
+        }
+
+        // other actions require a slug
+        $slug = $this->request->getParam('pass.0');
+        if(!$slug) {
+            return false;
+        }
+
+        // check if article belongs to current user
+        $article = $this->Articles->findBySlug($slug)->first();
+        return $article->user_id === $user['id'];
     }
 }
